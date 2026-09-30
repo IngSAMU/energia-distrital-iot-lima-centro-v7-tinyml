@@ -1,0 +1,40 @@
+# Visual Studio / .NET
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# PlatformIO / ESP32
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / local config
+.env
+.env.*
+secrets/
+*.key
+*.pem
+
+# Build artifacts
+dist/
+build/
+out/
