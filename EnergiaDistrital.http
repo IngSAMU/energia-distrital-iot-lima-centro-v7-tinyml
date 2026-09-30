@@ -1,0 +1,37 @@
+@EnergiaDistrital_HostAddress = http://localhost:5157
+
+### Estado del servicio
+GET {{EnergiaDistrital_HostAddress}}/health
+Accept: application/json
+
+### Resumen del distrito
+GET {{EnergiaDistrital_HostAddress}}/api/dashboard
+Accept: application/json
+
+### Zonas
+GET {{EnergiaDistrital_HostAddress}}/api/zones
+Accept: application/json
+
+### Medidores
+GET {{EnergiaDistrital_HostAddress}}/api/meters
+Accept: application/json
+
+### Mapa operativo
+GET {{EnergiaDistrital_HostAddress}}/api/map
+Accept: application/json
+
+### Lecturas recientes
+GET {{EnergiaDistrital_HostAddress}}/api/readings?limit=24
+Accept: application/json
+
+### Alertas
+GET {{EnergiaDistrital_HostAddress}}/api/alerts
+Accept: application/json
+
+### Generar una ronda de lecturas simuladas
+POST {{EnergiaDistrital_HostAddress}}/api/simulator/tick
+Accept: application/json
+
+### TinyML Lab V0.7
+GET http://localhost:5157/api/tinyml?zoneId=distrito-san-borja
+Accept: application/json

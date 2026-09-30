@@ -1,0 +1,57 @@
+﻿ID,Distrito,Establecimiento,Categoría,Red/Operador,Dirección verificada,Latitud,Longitud,Potencia simulada kW
+FAC-001,Lima (Cercado),Hospital Nacional Dos de Mayo,minsa,MINSA,"Parque Historia de la Medicina Peruana s/n, altura cdra. 13 Av. Grau, Cercado de Lima",-12.05587000,-77.01543000,1650
+FAC-002,Lima (Cercado),Hospital Nacional Arzobispo Loayza,minsa,MINSA,"Av. Alfonso Ugarte 848, Cercado de Lima",-12.04955000,-77.04462000,1800
+FAC-003,Lima (Cercado),Hospital Nacional Docente Madre Niño San Bartolomé,minsa,MINSA,"Av. Alfonso Ugarte 825, Cercado de Lima",-12.04977000,-77.04181000,1200
+FAC-004,Lima (Cercado),Hospital de Emergencias Grau,essalud,EsSalud,"Av. Miguel Grau 351, Cercado de Lima",-12.05895710,-77.03127790,1450
+FAC-005,Lima (Cercado),Clínica Internacional - Sede Lima,clinic,Clínica Internacional,"Av. Garcilaso de la Vega 1420, Cercado de Lima",-12.05834460,-77.03827910,820
+FAC-006,Lima (Cercado),Clínica Maison de Santé - Sede Lima,clinic,Maison de Santé,"Jr. Miguel Aljovín 222, Cercado de Lima",-12.05744600,-77.03394400,720
+FAC-007,Lima (Cercado),Real Plaza Centro Cívico,mall,Centro comercial,"Av. Garcilaso de la Vega 1337, Cercado de Lima",-12.05678000,-77.03733000,2200
+FAC-008,Barranco,Médica Ocular - Sede Barranco,clinic,Privada,"Av. Francisco Bolognesi 98, Barranco",-12.15109000,-77.01977000,360
+FAC-009,Breña,Instituto Nacional de Salud del Niño - Breña,minsa,MINSA,"Av. Brasil 600, Breña",-12.06512090,-77.04595470,1350
+FAC-010,Breña,La Rambla Brasil,mall,Centro comercial,"Av. Brasil 702-778, Breña",-12.06608620,-77.04695320,1500
+FAC-011,Jesús María,Hospital Nacional Edgardo Rebagliati Martins,essalud,EsSalud,"Av. Edgardo Rebagliati 490, Jesús María",-12.07836000,-77.03989000,2600
+FAC-012,Jesús María,Clínica San Felipe,clinic,Privada,"Av. Gregorio Escobedo 650, Jesús María",-12.08604000,-77.05434000,950
+FAC-013,Jesús María,Policlínico Peruano Japonés,clinic,Asociación Peruano Japonesa,"Av. Gregorio Escobedo 783, Jesús María",-12.08783000,-77.05507000,520
+FAC-014,Jesús María,Real Plaza Salaverry,mall,Centro comercial,"Av. Gral. Felipe Salaverry 2370, Jesús María",-12.08983000,-77.05273000,2500
+FAC-015,La Victoria,Hospital Nacional Guillermo Almenara Irigoyen,essalud,EsSalud,"Av. Grau 800, La Victoria",-12.05958000,-77.02234000,2400
+FAC-016,La Victoria,Hospital de Emergencias Pediátricas,minsa,MINSA,"Av. Miguel Grau 854, La Victoria",-12.05817080,-77.02172930,1050
+FAC-017,Lince,Clínica Risso,clinic,Privada,"Av. Arequipa 2030, Lince",-12.08498800,-77.03457760,620
+FAC-018,Lince,Centro Comercial Risso,mall,Centro comercial,"Av. Arequipa 2250, Lince",-12.08640000,-77.03481000,950
+FAC-019,Magdalena del Mar,Hospital Nacional Víctor Larco Herrera,minsa,MINSA,"Av. Augusto Pérez Araníbar 600, Magdalena del Mar",-12.09723000,-77.06555000,1100
+FAC-020,Magdalena del Mar,Clínica Virgen del Rosario,clinic,Privada,"Jr. Castilla 976, Magdalena del Mar",-12.08781700,-77.07237100,480
+FAC-021,Miraflores,Hospital de Emergencias José Casimiro Ulloa,minsa,MINSA,"Av. Roosevelt 6355-6357, Miraflores",-12.12810000,-77.01774000,1200
+FAC-022,Miraflores,Hospital III Suárez Angamos,essalud,EsSalud,"Av. Angamos Este 261, Miraflores",-12.11331000,-77.02814000,1300
+FAC-023,Miraflores,Clínica Delgado Auna,clinic,Auna,"Av. Angamos Oeste 450-490 / Calle General Borgoño, Miraflores",-12.11313000,-77.03300000,1100
+FAC-024,Miraflores,Clínica Good Hope,clinic,Privada,"Malecón Balta 956, Miraflores",-12.12562000,-77.03452000,900
+FAC-025,Miraflores,Larcomar,mall,Centro comercial,"Malecón de la Reserva 610, Miraflores",-12.13194000,-77.03006000,1700
+FAC-026,Pueblo Libre,Hospital Santa Rosa,minsa,MINSA,"Av. Simón Bolívar, cdra. 8, Pueblo Libre",-12.07207945,-77.06103691,1350
+FAC-027,Pueblo Libre,Clínica Centenario Peruano Japonesa,clinic,Asociación Peruano Japonesa,"Av. Paso de los Andes 675, Pueblo Libre",-12.07312430,-77.05912800,950
+FAC-028,Pueblo Libre,Clínica Stella Maris,clinic,Privada,"Av. Paso de los Andes 923, Pueblo Libre",-12.07139763,-77.05928362,820
+FAC-029,Rímac,Policlínico Francisco Pizarro,essalud,EsSalud,"Av. Francisco Pizarro 585, Rímac",-12.03701750,-77.03512710,420
+FAC-030,San Borja,Instituto Nacional de Salud del Niño - San Borja,minsa,MINSA,"Av. Agustín de la Rosa Toro 1399 (Av. Javier Prado Este 3101), San Borja",-12.08564000,-76.99218000,1500
+FAC-031,San Borja,SANNA Clínica San Borja,clinic,SANNA,"Av. Guardia Civil 337, San Borja",-12.09202000,-77.00834000,780
+FAC-032,San Borja,Clínica Internacional - Sede San Borja,clinic,Clínica Internacional,"Av. Guardia Civil 385-433, San Borja",-12.09246393,-77.00883127,1100
+FAC-033,San Borja,Clínica Santa Isabel,clinic,Privada,"Av. Guardia Civil 133, San Borja",-12.08939693,-77.00737837,720
+FAC-034,San Borja,Clínica Vesalio,clinic,Privada,"Jr. Joseph Thompson 140, San Borja",-12.10637845,-77.00722390,800
+FAC-035,San Borja,Clínica Oncosalud - Sede Hospitalaria,clinic,Auna / Oncosalud,"Av. Guardia Civil 227-229, San Borja",-12.09053000,-77.00780000,1150
+FAC-036,San Borja,Oncosalud Auna - Sede Ambulatoria,clinic,Auna / Oncosalud,"Av. Guardia Civil 571, San Borja",-12.09536000,-77.01030000,720
+FAC-037,San Borja,La Rambla San Borja,mall,Centro comercial,"Av. Javier Prado Este 2050, San Borja",-12.08949000,-77.00479000,1900
+FAC-038,San Borja,Real Plaza Primavera,mall,Centro comercial,"Av. Aviación 2681, San Borja",-12.11029000,-77.00172000,1800
+FAC-039,San Isidro,Clínica Anglo Americana,clinic,Privada,"C. Alfredo Salazar 350, San Isidro",-12.10922000,-77.03916000,1050
+FAC-040,San Isidro,Clínica Ricardo Palma,clinic,Privada,"Av. Javier Prado Este 1066, San Isidro",-12.09071000,-77.01830000,1150
+FAC-041,San Isidro,Auna Guardia Civil - Clínica,clinic,Auna,"Av. Guardia Civil 368, San Isidro",-12.09189611,-77.00903512,800
+FAC-042,San Isidro,Clínica Javier Prado,clinic,Privada,"Av. Javier Prado Este 499, San Isidro",-12.09110000,-77.02845000,900
+FAC-043,San Isidro,Clínica Internacional - Medicentro San Isidro,clinic,Clínica Internacional,"Av. Paseo de la República 3058, San Isidro",-12.09308000,-77.02396000,650
+FAC-044,San Isidro,Centro Comercial Camino Real,mall,Centro comercial,"Av. Camino Real 479, San Isidro",-12.09707000,-77.03625000,900
+FAC-045,San Miguel,Hospital I Octavio Mongrut Muñoz,essalud,EsSalud,"Av. Parque de las Leyendas 255, San Miguel",-12.06596120,-77.09458320,920
+FAC-046,San Miguel,Clínica San Gabriel,clinic,Privada,"Av. de la Marina 2955, San Miguel",-12.07674000,-77.09574000,950
+FAC-047,San Miguel,Plaza San Miguel,mall,Centro comercial,"Av. de la Marina 2000, San Miguel",-12.07691000,-77.08262000,2600
+FAC-048,San Miguel,Open Plaza La Marina,mall,Centro comercial,"Av. de la Marina 2355, San Miguel",-12.07958300,-77.08869000,1800
+FAC-049,Santiago de Surco,Policlínico EsSalud Próceres,essalud,EsSalud,"Av. Los Próceres 440, Santiago de Surco",-12.15066000,-76.98860000,480
+FAC-050,Santiago de Surco,Clínica San Pablo - Sede Surco,clinic,San Pablo,"Av. El Polo 789, Santiago de Surco",-12.10016800,-76.97160700,1150
+FAC-051,Santiago de Surco,Clínica Internacional - El Polo,clinic,Clínica Internacional,"Av. El Polo 461, Santiago de Surco",-12.10406000,-76.97292000,760
+FAC-052,Santiago de Surco,Clínica Padre Luis Tezza,clinic,Privada,"Av. El Polo 570, Santiago de Surco",-12.10320000,-76.97201000,850
+FAC-053,Santiago de Surco,Jockey Plaza,mall,Centro comercial,"Av. Javier Prado Este 4200, Santiago de Surco",-12.08645600,-76.97703600,3200
+FAC-054,Santiago de Surco,El Polo Plaza Center,mall,Centro comercial,"Av. El Polo 759, Santiago de Surco",-12.10075000,-76.97180000,900
+FAC-055,Surquillo,Instituto Nacional de Enfermedades Neoplásicas - INEN,minsa,MINSA,"Av. Angamos Este 2520, Surquillo",-12.11261000,-76.99851000,1800
+FAC-056,Surquillo,Mallplaza Angamos,mall,Centro comercial,"Av. Angamos Este 1803 / cruce Tomás Marsano, Surquillo",-12.11144400,-77.01177800,2100

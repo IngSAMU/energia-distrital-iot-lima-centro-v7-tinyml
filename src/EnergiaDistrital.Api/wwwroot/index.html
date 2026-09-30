@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1f33">
+  <meta name="description" content="Panel de monitoreo energético IoT de los distritos de Lima Centro.">
+  <title>Energía Distrital | Centro de control IoT</title>
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/css/app.css?v=7">
+</head>
+<body class="is-loading">
+  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="/" aria-label="Energía Distrital, inicio">
+        <span class="brand__mark" aria-hidden="true">E</span>
+        <span class="brand__copy">
+          <strong>Energía Distrital</strong>
+          <small>Centro de control IoT</small>
+        </span>
+      </a>
+
+      <div class="topbar__actions">
+        <div class="connection" id="connectionState" data-state="updating" role="status" aria-live="polite">
+          <span class="connection__dot" aria-hidden="true"></span>
+          <span>
+            <strong id="connectionLabel">Conectando</strong>
+            <small id="lastUpdated">Esperando datos</small>
+          </span>
+        </div>
+
+        <label class="zone-filter" for="zoneSelect">
+          <span>Distrito</span>
+          <select id="zoneSelect" aria-label="Filtrar panel por distrito">
+            <option value="all">Todos los distritos</option>
+          </select>
+        </label>
+
+        <button class="button button--primary" id="simulateButton" type="button">
+          <span class="button__icon" aria-hidden="true">+</span>
+          <span class="button__label">Simular lectura</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="contenido" class="page-shell">
+    <section class="page-heading" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">Operación en tiempo real</p>
+        <h1 id="pageTitle">Pulso energético de Lima Centro</h1>
+        <p class="page-heading__description">Demanda, consumo y estado de la red IoT en 15 distritos de Lima Centro.</p>
+      </div>
+      <div class="live-badge">
+        <span aria-hidden="true"></span>
+        Datos en vivo · cada 5 s
+      </div>
+    </section>
+
+    <section class="data-banner" id="dataBanner" role="alert" hidden>
+      <span class="data-banner__icon" aria-hidden="true">!</span>
+      <p><strong id="dataBannerTitle">No pudimos actualizar el panel.</strong> <span id="dataBannerMessage">Conservamos la última información disponible.</span></p>
+      <button class="button button--quiet" id="retryButton" type="button">Reintentar</button>
+    </section>
+
+    <section class="metrics" aria-label="Indicadores principales">
+      <article class="metric-card metric-card--blue">
+        <div class="metric-card__topline">
+          <span class="metric-card__label">Demanda actual</span>
+          <span class="metric-card__icon" aria-hidden="true">kW</span>
+        </div>
+        <p class="metric-card__value" id="currentDemand">—</p>
+        <p class="metric-card__meta" id="demandTrend">Esperando lecturas</p>
+      </article>
+
+      <article class="metric-card metric-card--teal">
+        <div class="metric-card__topline">
+          <span class="metric-card__label">Energía consumida hoy</span>
+          <span class="metric-card__icon" aria-hidden="true">kWh</span>
+        </div>
+        <p class="metric-card__value" id="energyToday">—</p>
+        <p class="metric-card__meta" id="energyMeta">Acumulado de Lima Centro</p>
+      </article>
+
+      <article class="metric-card metric-card--violet">
+        <div class="metric-card__topline">
+          <span class="metric-card__label">Medidores en línea</span>
+          <span class="metric-card__icon" aria-hidden="true">IoT</span>
+        </div>
+        <p class="metric-card__value" id="onlineMeters">—</p>
+        <p class="metric-card__meta" id="metersMeta">Estado de conectividad</p>
+      </article>
+
+      <article class="metric-card metric-card--amber">
+        <div class="metric-card__topline">
+          <span class="metric-card__label">Alertas activas</span>
+          <span class="metric-card__icon" aria-hidden="true">!</span>
+        </div>
+        <p class="metric-card__value" id="activeAlerts">—</p>
+        <p class="metric-card__meta" id="alertsMeta">Sin clasificar</p>
+      </article>
+    </section>
+
+    <section class="panel tinyml-panel" aria-labelledby="tinymlTitle">
+      <header class="panel__header tinyml-panel__header">
+        <div>
+          <p class="panel__kicker">Sección II · IA en el borde</p>
+          <h2 id="tinymlTitle">Laboratorio TinyML — inferencia local</h2>
+          <p class="tinyml-panel__description">Panel experimental para preparar cuantización, métricas y despliegue del modelo en ESP32-S3. Los resultados de validación actuales proceden de un dataset sintético reproducible; las mediciones finales en el dispositivo siguen pendientes.</p>
+        </div>
+        <div class="tinyml-status-badge" id="tinymlStatusBadge" data-state="lab">
+          <span aria-hidden="true"></span>
+          LAB SIMULADO · NO ESP32
+        </div>
+      </header>
+
+      <div class="tinyml-kpis" aria-label="Indicadores del laboratorio TinyML">
+        <article class="tinyml-kpi">
+          <small>Modelo experimental</small>
+          <strong id="tinymlModelName">—</strong>
+          <span>6 entradas · 2 capas ocultas · 3 clases</span>
+        </article>
+        <article class="tinyml-kpi">
+          <small>Dataset</small>
+          <strong id="tinymlDatasetCount">—</strong>
+          <span>muestras sintéticas reproducibles</span>
+        </article>
+        <article class="tinyml-kpi tinyml-kpi--success">
+          <small>Accuracy validación</small>
+          <strong id="tinymlAccuracy">—</strong>
+          <span>modelo experimental INT8</span>
+        </article>
+        <article class="tinyml-kpi tinyml-kpi--critical">
+          <small>Recall clase Crítico</small>
+          <strong id="tinymlCriticalRecall">—</strong>
+          <span>prioridad de seguridad</span>
+        </article>
+      </div>
+
+      <div class="tinyml-grid">
+        <article class="tinyml-card tinyml-inference-card">
+          <div class="tinyml-card__heading">
+            <div>
+              <span class="tinyml-card__eyebrow">Inferencia actual · laboratorio</span>
+              <h3 id="tinymlPredictionZone">Distrito de referencia</h3>
+            </div>
+            <span class="tinyml-prediction" id="tinymlPrediction" data-class="normal">—</span>
+          </div>
+
+          <div class="tinyml-probabilities" aria-label="Probabilidades de clase">
+            <div><span>Normal</span><strong id="tinymlProbNormal">—</strong><i><b id="tinymlBarNormal"></b></i></div>
+            <div><span>Atención</span><strong id="tinymlProbWarning">—</strong><i><b id="tinymlBarWarning"></b></i></div>
+            <div><span>Crítico</span><strong id="tinymlProbCritical">—</strong><i><b id="tinymlBarCritical"></b></i></div>
+          </div>
+
+          <div class="tinyml-features" id="tinymlFeatures" aria-label="Vector de características">
+            <span>Carga <strong>—</strong></span>
+            <span>Voltaje <strong>—</strong></span>
+            <span>Corriente <strong>—</strong></span>
+            <span>PF <strong>—</strong></span>
+            <span>Frecuencia <strong>—</strong></span>
+            <span>Temperatura <strong>—</strong></span>
+          </div>
+
+          <p class="tinyml-reference">Referencia del semáforo distrital: <strong id="tinymlRuleClass">—</strong>. La inferencia mostrada se ejecuta en el backend local con pesos INT8 experimentales; aún no equivale a ejecución TFLite Micro en ESP32-S3.</p>
+        </article>
+
+        <article class="tinyml-card">
+          <div class="tinyml-card__heading">
+            <div>
+              <span class="tinyml-card__eyebrow">Validación experimental</span>
+              <h3>Matriz de confusión</h3>
+            </div>
+            <span class="tinyml-chip">Test: <b id="tinymlTestCount">—</b></span>
+          </div>
+          <div class="tinyml-confusion-wrap" id="tinymlConfusion">
+            <div class="tinyml-empty">Esperando métricas…</div>
+          </div>
+          <div class="tinyml-class-metrics">
+            <table>
+              <thead><tr><th>Clase</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+              <tbody id="tinymlClassMetricsBody"><tr><td colspan="4">Esperando métricas…</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+
+      <div class="tinyml-pipeline" aria-label="Proceso de optimización TinyML">
+        <div class="tinyml-pipeline__step is-done"><span>1</span><div><strong>Dataset</strong><small>9,000 muestras sintéticas</small></div></div>
+        <i aria-hidden="true">→</i>
+        <div class="tinyml-pipeline__step is-done"><span>2</span><div><strong>MLP FP32</strong><small>6 → 12 → 8 → 3</small></div></div>
+        <i aria-hidden="true">→</i>
+        <div class="tinyml-pipeline__step is-done"><span>3</span><div><strong>INT8 experimental</strong><small>pesos cuantizados</small></div></div>
+        <i aria-hidden="true">→</i>
+        <div class="tinyml-pipeline__step is-pending"><span>4</span><div><strong>Poda estructurada</strong><small>pendiente de barrido</small></div></div>
+        <i aria-hidden="true">→</i>
+        <div class="tinyml-pipeline__step is-pending"><span>5</span><div><strong>TFLite Micro</strong><small>pendiente ESP32-S3</small></div></div>
+      </div>
+
+      <div class="tinyml-resources-layout">
+        <div>
+          <div class="tinyml-section-heading">
+            <div><span class="tinyml-card__eyebrow">Recursos y desempeño</span><h3>Estado de mediciones para la Sección II</h3></div>
+            <span class="tinyml-chip">Host ref. <b id="tinymlHostLatency">—</b></span>
+          </div>
+          <div class="tinyml-resources" id="tinymlResources"><div class="tinyml-empty">Esperando estado de recursos…</div></div>
+        </div>
+        <aside class="tinyml-lab-note">
+          <strong>Qué ya podemos sustentar</strong>
+          <p id="tinymlDataNote">Dataset, arquitectura del modelo, validación experimental y cuantización de pesos.</p>
+          <strong>Qué falta medir en el ESP32-S3</strong>
+          <p>Tamaño final TFLite, Tensor Arena, SRAM/Flash, corriente por estado y latencia de inferencia con <code>esp_timer_get_time()</code>.</p>
+          <div class="tinyml-downloads">
+            <a href="/data/tinyml_lab_dataset.csv" download>Descargar dataset CSV</a>
+            <a href="/data/tinyml_lab_model.bin" download>Payload INT8 experimental</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel map-panel" aria-labelledby="mapTitle">
+      <header class="panel__header map-panel__header">
+        <div>
+          <p class="panel__kicker">Supervisión georreferenciada</p>
+          <h2 id="mapTitle">Mapa y semáforo energético de Lima Centro</h2>
+        </div>
+        <div class="map-panel__tools">
+          <label class="facility-filter" for="facilityTypeSelect">
+            <span>Infraestructura</span>
+            <select id="facilityTypeSelect" aria-label="Filtrar infraestructura prioritaria">
+              <option value="all">Todas</option>
+              <option value="clinic">Clínicas privadas</option>
+              <option value="minsa">MINSA</option>
+              <option value="essalud">EsSalud</option>
+              <option value="mall">Centros comerciales</option>
+            </select>
+          </label>
+          <small class="panel__aside map-panel__count" id="mapCount" aria-live="polite">Esperando ubicación de medidores</small>
+        </div>
+      </header>
+
+      <div class="map-layout">
+        <div class="map-stage">
+          <div id="districtMap" class="map-canvas" role="region" aria-label="Mapa interactivo de distritos y medidores de Lima Centro" aria-describedby="mapHelp">
+            <div class="map-empty">
+              <span aria-hidden="true">⌖</span>
+              <strong>Preparando mapa operativo</strong>
+              <small>Las ubicaciones aparecerán al recibir los datos de la red IoT.</small>
+            </div>
+          </div>
+          <p class="sr-only" id="mapHelp">Seleccione un marcador con clic, o con las teclas Tab y Enter, para consultar el medidor.</p>
+          <div class="map-legend" aria-label="Semáforo energético del mapa">
+            <span><i class="map-legend__dot map-legend__dot--online" aria-hidden="true"></i>Normal &lt; 70%</span>
+            <span><i class="map-legend__dot map-legend__dot--warning" aria-hidden="true"></i>Atención 70–89%</span>
+            <span><i class="map-legend__dot map-legend__dot--offline" aria-hidden="true"></i>Crítico ≥ 90%</span>
+            <span class="map-legend__facility"><b class="facility-legend facility-legend--clinic">+</b>Clínica</span>
+            <span class="map-legend__facility"><b class="facility-legend facility-legend--minsa">M</b>MINSA</span>
+            <span class="map-legend__facility"><b class="facility-legend facility-legend--essalud">E</b>EsSalud</span>
+            <span class="map-legend__facility"><b class="facility-legend facility-legend--mall">▦</b>Centro comercial</span>
+            <small>El punto de color es una referencia del distrito, no un límite administrativo. Los símbolos se ubican en coordenadas verificadas de cada establecimiento.</small>
+          </div>
+        </div>
+
+        <aside class="map-detail" id="mapDetail" aria-live="polite" aria-label="Detalle del medidor seleccionado">
+          <div class="map-detail__empty">
+            <span aria-hidden="true">IoT</span>
+            <strong>Seleccione un medidor</strong>
+            <small>Consulte demanda, calidad eléctrica y versión del equipo.</small>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel infrastructure-panel" aria-labelledby="infrastructureTitle">
+      <header class="panel__header infrastructure-panel__header">
+        <div>
+          <p class="panel__kicker">Red prioritaria · Lima Centro</p>
+          <h2 id="infrastructureTitle">Clínicas, hospitales y centros comerciales conectados</h2>
+          <p class="infrastructure-panel__description">Catálogo curado de establecimientos principales o ampliamente reconocidos por distrito. Las ubicaciones corresponden al distrito verificado; la telemetría es simulada y está preparada para ser reemplazada por nodos ESP32/MQTT reales.</p>
+        </div>
+        <div class="infrastructure-summary" aria-label="Resumen de infraestructura">
+          <span><small>Total visible</small><strong id="facilityCount">0</strong></span>
+          <span><small>MINSA</small><strong id="facilityMinsaCount">0</strong></span>
+          <span><small>EsSalud</small><strong id="facilityEssaludCount">0</strong></span>
+          <span><small>Clínicas</small><strong id="facilityClinicCount">0</strong></span>
+          <span><small>Centros comerciales</small><strong id="facilityMallCount">0</strong></span>
+        </div>
+      </header>
+      <div class="table-wrap infrastructure-table-wrap">
+        <table class="data-table infrastructure-table">
+          <thead>
+            <tr>
+              <th scope="col">Establecimiento</th>
+              <th scope="col">Tipo / red</th>
+              <th scope="col">Distrito</th>
+              <th scope="col">Demanda</th>
+              <th scope="col">Carga</th>
+              <th scope="col">Semáforo</th>
+              <th scope="col">Conexión</th>
+            </tr>
+          </thead>
+          <tbody id="facilitiesBody">
+            <tr class="table-empty"><td colspan="7">Esperando infraestructura prioritaria…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="dashboard-grid">
+      <section class="panel demand-panel" aria-labelledby="demandTitle">
+        <header class="panel__header">
+          <div>
+            <p class="panel__kicker">Últimas 24 horas</p>
+            <h2 id="demandTitle">Curva de demanda</h2>
+          </div>
+          <div class="chart-summary" aria-label="Resumen de la curva">
+            <span><small>Pico</small><strong id="peakDemand">—</strong></span>
+            <span><small>Promedio</small><strong id="averageDemand">—</strong></span>
+          </div>
+        </header>
+
+        <div class="chart-wrap" id="chartWrap">
+          <canvas id="demandChart" role="img" tabindex="0" aria-label="Gráfico de demanda eléctrica por hora. Use las flechas izquierda y derecha para explorar los valores."></canvas>
+          <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite" hidden></div>
+          <div class="empty-state empty-state--chart" id="chartEmpty" hidden>
+            <span aria-hidden="true">∿</span>
+            <strong>Aún no hay lecturas</strong>
+            <small>Simula una lectura para empezar a dibujar la curva.</small>
+          </div>
+        </div>
+        <div class="chart-legend"><span class="chart-legend__line" aria-hidden="true"></span> <span id="chartLegendLabel">Demanda total de Lima Centro (kW)</span></div>
+
+        <table class="sr-only" id="chartDataTable">
+          <caption>Valores de demanda representados en el gráfico</caption>
+          <thead><tr><th>Hora</th><th>Demanda</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="panel alerts-panel" aria-labelledby="alertsTitle">
+        <header class="panel__header">
+          <div>
+            <p class="panel__kicker">Atención operativa · actualización cada 5 s</p>
+            <h2 id="alertsTitle">Alertas activas</h2>
+          </div>
+          <span class="count-badge" id="alertsCount" aria-label="Cantidad de alertas">0</span>
+        </header>
+        <div class="alert-list" id="alertList">
+          <div class="empty-state">
+            <span aria-hidden="true">✓</span>
+            <strong>Todo bajo control</strong>
+            <small>No hay alertas activas.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel zones-panel" aria-labelledby="zonesTitle">
+        <header class="panel__header">
+          <div>
+            <p class="panel__kicker">Distribución territorial</p>
+            <h2 id="zonesTitle">Consumo por distrito</h2>
+          </div>
+          <small class="panel__aside" id="zonesTotal">0 distritos</small>
+        </header>
+        <div class="zone-bars" id="zoneBars">
+          <div class="empty-state">
+            <span aria-hidden="true">⌁</span>
+            <strong>Sin distritos disponibles</strong>
+            <small>Los distritos aparecerán cuando la API reporte datos.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel meters-panel" aria-labelledby="metersTitle">
+        <header class="panel__header">
+          <div>
+            <p class="panel__kicker">Inventario conectado</p>
+            <h2 id="metersTitle">Medidores IoT</h2>
+          </div>
+          <small class="panel__aside" id="metersCount">0 medidores</small>
+        </header>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Medidor</th>
+                <th scope="col">Distrito</th>
+                <th scope="col">Voltaje</th>
+                <th scope="col">Demanda</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Último reporte</th>
+              </tr>
+            </thead>
+            <tbody id="metersBody">
+              <tr class="table-empty"><td colspan="6">Esperando información de medidores…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <footer class="page-footer">
+      <p>Red de Monitoreo Energético · Lima Centro · v0.7</p>
+      <p>Actualización automática protegida contra lecturas incompletas.</p>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+  <script src="/vendor/leaflet/leaflet.js?v=7" defer></script>
+  <script src="/js/app.js?v=7" defer></script>
+</body>
+</html>

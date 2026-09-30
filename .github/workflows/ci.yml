@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    name: Compilar y probar MVP
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restaurar dependencias
+        run: dotnet restore .\EnergiaDistrital.sln
+
+      - name: Compilar en Release
+        run: dotnet build .\EnergiaDistrital.sln --configuration Release --no-restore
+
+      - name: Ejecutar prueba de humo HTTP
+        shell: pwsh
+        run: >-
+          .\scripts\smoke-test.ps1
+          -Project .\src\EnergiaDistrital.Api\EnergiaDistrital.Api.csproj
+          -BaseUrl http://127.0.0.1:5157
+          -SkipBuild
