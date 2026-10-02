@@ -210,8 +210,8 @@
         <aside class="tinyml-lab-note">
           <strong>Qué ya podemos sustentar</strong>
           <p id="tinymlDataNote">Dataset, arquitectura del modelo, validación experimental y cuantización de pesos.</p>
-          <strong>Qué falta medir en el ESP32-S3</strong>
-          <p>Tamaño final TFLite, Tensor Arena, SRAM/Flash, corriente por estado y latencia de inferencia con <code>esp_timer_get_time()</code>.</p>
+          <strong>Validación física pendiente — requiere ESP32-S3</strong>
+          <p>Ya fueron medidos por compilación: SRAM estática 15,307 bytes, Flash de aplicación 170,528 bytes y 194,720 bytes en las imágenes principales de despliegue. La validación de Tensor Arena mínima estable, SRAM dinámica/Heap, Stack High-Water Mark, consumo de corriente y latencia de inferencia TFLite Micro requiere disponer físicamente de una placa ESP32-S3. Por rigor experimental, estos valores no se estiman.</p>
           <div class="tinyml-downloads">
             <a href="/data/tinyml_lab_dataset.csv" download>Descargar dataset CSV</a>
             <a href="/data/tinyml_lab_model.bin" download>Payload INT8 experimental</a>
