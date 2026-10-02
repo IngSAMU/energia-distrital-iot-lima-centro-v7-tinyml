@@ -71,6 +71,8 @@
 
     el.zoneSelect.addEventListener("change", function () {
       state.selectedZone = el.zoneSelect.value;
+      state.selectedMapMeterId = "";
+      state.selectedMapFacilityId = "";
       state.chartFocus = -1;
       state.mapFramedZone = null;
       renderAll();
@@ -339,7 +341,7 @@
     const visibleFacilities = mapFacilities.filter(matchesSelectedZone).filter(matchesFacilityType).filter(hasMapCoordinates);
 
     if (!visibleMeters.some(function (meter) { return meter.id === state.selectedMapMeterId; })) {
-      state.selectedMapMeterId = visibleMeters.length ? visibleMeters[0].id : "";
+      state.selectedMapMeterId = state.selectedZone === "all" ? "" : (visibleMeters.length ? visibleMeters[0].id : "");
     }
     if (!visibleFacilities.some(function (facility) { return facility.id === state.selectedMapFacilityId; })) {
       state.selectedMapFacilityId = "";
@@ -599,7 +601,23 @@
 
   function renderMapDetail(meter) {
     if (!meter) {
-      el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Seleccione un medidor</strong><small>Consulte demanda, calidad eléctrica y versión del equipo.</small></div>';
+      if (state.selectedZone === "all") {
+        const meters = state.mapData && Array.isArray(state.mapData.meters) ? state.mapData.meters : [];
+        const telemetry = meters.map(telemetryState);
+        const fresh = telemetry.filter(function (status) { return status === "fresh"; }).length;
+        const maintenance = telemetry.filter(function (status) { return status === "maintenance"; }).length;
+        const delayed = telemetry.filter(function (status) { return status === "stale"; }).length;
+        const unavailable = telemetry.filter(function (status) { return status === "nodata" || status === "offline"; }).length;
+        const zones = state.mapData && Array.isArray(state.mapData.zones) ? state.mapData.zones : [];
+        el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Vista general de Lima Centro</strong><small>' +
+          escapeHtml(zones.length + " distritos · " + fresh + " lecturas frescas" +
+          (maintenance ? " · " + maintenance + " en mantenimiento" : "") +
+          (delayed ? " · " + delayed + " retrasadas" : "") +
+          (unavailable ? " · " + unavailable + " sin datos/conexión" : "")) +
+          '</small><small>Seleccione un marcador del mapa para consultar el detalle de un nodo.</small></div>';
+      } else {
+        el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Seleccione un medidor</strong><small>Consulte demanda, calidad eléctrica y versión del equipo.</small></div>';
+      }
       return;
     }
     const telemetry = telemetryState(meter);
