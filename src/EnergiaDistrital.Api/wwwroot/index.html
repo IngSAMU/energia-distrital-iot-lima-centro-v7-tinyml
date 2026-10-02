@@ -263,11 +263,17 @@
           </div>
         </div>
 
-        <aside class="map-detail" id="mapDetail" aria-live="polite" aria-label="Detalle del medidor seleccionado">
-          <div class="map-detail__empty">
-            <span aria-hidden="true">IoT</span>
-            <strong>Seleccione un medidor</strong>
-            <small>Consulte demanda, calidad eléctrica y versión del equipo.</small>
+        <aside class="map-detail" id="mapDetail" aria-live="polite" aria-label="Resumen del distrito y detalle del nodo seleccionado">
+          <div class="map-detail__tabs" role="tablist" aria-label="Información del mapa">
+            <button type="button" id="mapSummaryTab" class="map-detail__tab is-active" role="tab" aria-selected="true">Resumen distrito</button>
+            <button type="button" id="mapNodeTab" class="map-detail__tab" role="tab" aria-selected="false">Detalle nodo</button>
+          </div>
+          <div id="mapDetailContent" class="map-detail__content">
+            <div class="map-detail__empty">
+              <span aria-hidden="true">IoT</span>
+              <strong>Vista general de Lima Centro</strong>
+              <small>Seleccione un distrito o un marcador para consultar información operativa.</small>
+            </div>
           </div>
         </aside>
       </div>
