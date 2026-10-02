@@ -35,6 +35,7 @@
     selectedFacilityType: "all",
     selectedMapMeterId: "",
     selectedMapFacilityId: "",
+    mapDetailMode: "summary",
     initialized: false,
     loading: false,
     apiStatus: "initializing",
@@ -62,7 +63,7 @@
       "demandTrend", "energyToday", "energyMeta", "onlineMeters", "metersMeta", "activeAlerts",
       "alertsMeta", "peakDemand", "averageDemand", "demandChart", "chartWrap", "chartTooltip",
       "chartEmpty", "chartDataTable", "alertList", "alertsCount", "zoneBars", "zonesTotal",
-      "metersBody", "metersCount", "districtMap", "mapCount", "mapDetail", "chartLegendLabel", "toast",
+      "metersBody", "metersCount", "districtMap", "mapCount", "mapDetail", "mapDetailContent", "mapSummaryTab", "mapNodeTab", "chartLegendLabel", "toast",
       "facilityTypeSelect", "facilitiesBody", "facilityCount", "facilityMinsaCount", "facilityEssaludCount", "facilityClinicCount", "facilityMallCount",
       "tinymlStatusBadge", "tinymlModelName", "tinymlDatasetCount", "tinymlAccuracy", "tinymlCriticalRecall", "tinymlPredictionZone", "tinymlPrediction",
       "tinymlProbNormal", "tinymlProbWarning", "tinymlProbCritical", "tinymlBarNormal", "tinymlBarWarning", "tinymlBarCritical", "tinymlFeatures", "tinymlRuleClass",
@@ -73,6 +74,7 @@
       state.selectedZone = el.zoneSelect.value;
       state.selectedMapMeterId = "";
       state.selectedMapFacilityId = "";
+      state.mapDetailMode = "summary";
       state.chartFocus = -1;
       state.mapFramedZone = null;
       renderAll();
@@ -83,6 +85,14 @@
       state.selectedMapFacilityId = "";
       state.mapFramedZone = null;
       renderAll();
+    });
+    el.mapSummaryTab.addEventListener("click", function () {
+      state.mapDetailMode = "summary";
+      renderMap();
+    });
+    el.mapNodeTab.addEventListener("click", function () {
+      state.mapDetailMode = "node";
+      renderMap();
     });
     el.simulateButton.addEventListener("click", simulateReading);
     el.retryButton.addEventListener("click", function () { loadData(true); });
@@ -221,6 +231,7 @@
     if (result.ok) {
       state.tinyml = unwrapObject(result.data, ["tinyml", "lab", "model"]);
       renderTinyMl();
+      if (state.mapDetailMode === "summary") renderMap();
     }
   }
 
@@ -357,8 +368,11 @@
       " · " + visibleFacilities.length + " infraestructuras · " + statusCounts.normal + " normal · " + statusCounts.warning + " atención · " + statusCounts.critical + " crítico";
 
     const selectedFacility = visibleFacilities.find(function (facility) { return facility.id === state.selectedMapFacilityId; }) || null;
-    if (selectedFacility) renderFacilityDetail(selectedFacility);
-    else renderMapDetail(visibleMeters.find(function (meter) { return meter.id === state.selectedMapMeterId; }) || null);
+    const selectedMeter = visibleMeters.find(function (meter) { return meter.id === state.selectedMapMeterId; }) || null;
+    updateMapDetailTabs(Boolean(selectedFacility || selectedMeter));
+    if (state.mapDetailMode === "summary") renderDistrictSummary();
+    else if (selectedFacility) renderFacilityDetail(selectedFacility);
+    else renderMapDetail(selectedMeter);
 
     const hasZoneCoordinates = visibleZones.some(hasMapCoordinates);
     if (!visibleMeters.length && !visibleFacilities.length && !hasZoneCoordinates && !validMapViewport(mapData.viewport)) {
@@ -583,12 +597,14 @@
   function selectMapMeter(meterId) {
     state.selectedMapMeterId = String(meterId);
     state.selectedMapFacilityId = "";
+    state.mapDetailMode = "node";
     renderMap();
   }
 
   function selectMapFacility(facilityId) {
     state.selectedMapFacilityId = String(facilityId);
     state.selectedMapMeterId = "";
+    state.mapDetailMode = "node";
     const source = Array.isArray(state.facilities) ? state.facilities : [];
     const facility = source.find(function (item) { return item.id === state.selectedMapFacilityId; });
     if (facility && facility.zoneId) {
@@ -599,25 +615,142 @@
     renderAll();
   }
 
+  function updateMapDetailTabs(hasNodeSelection) {
+    if (!el.mapSummaryTab || !el.mapNodeTab) return;
+    el.mapSummaryTab.classList.toggle("is-active", state.mapDetailMode === "summary");
+    el.mapNodeTab.classList.toggle("is-active", state.mapDetailMode === "node");
+    el.mapSummaryTab.setAttribute("aria-selected", state.mapDetailMode === "summary" ? "true" : "false");
+    el.mapNodeTab.setAttribute("aria-selected", state.mapDetailMode === "node" ? "true" : "false");
+    el.mapNodeTab.disabled = !hasNodeSelection;
+    if (!hasNodeSelection && state.mapDetailMode === "node") {
+      state.mapDetailMode = "summary";
+      el.mapSummaryTab.classList.add("is-active");
+      el.mapSummaryTab.setAttribute("aria-selected", "true");
+      el.mapNodeTab.classList.remove("is-active");
+      el.mapNodeTab.setAttribute("aria-selected", "false");
+    }
+  }
+
+  function renderDistrictSummary() {
+    const target = el.mapDetailContent || el.mapDetail;
+    if (!target) return;
+
+    const all = state.selectedZone === "all";
+    const zone = all ? null : selectedZoneSummary();
+    const meters = all ? state.meters : state.meters.filter(function (meter) {
+      return zone ? sameZone(meter, zone.id, zone.name) : matchesSelectedZone(meter);
+    });
+    const facilities = (state.facilities || []).filter(function (facility) {
+      return all || (zone && sameZone(facility, zone.id, zone.name));
+    });
+    const alerts = (state.alerts || []).filter(function (alert) {
+      return alert.active && (all || (zone && sameZone(alert, zone.id, zone.name)));
+    });
+    const telemetry = meters.map(telemetryState);
+    const fresh = telemetry.filter(function (status) { return status === "fresh"; }).length;
+    const maintenance = telemetry.filter(function (status) { return status === "maintenance"; }).length;
+    const delayed = telemetry.filter(function (status) { return status === "stale"; }).length;
+    const unavailable = telemetry.filter(function (status) { return status === "nodata" || status === "offline"; }).length;
+
+    if (all) {
+      const zones = availableZones();
+      const statusCounts = zones.reduce(function (acc, item) {
+        const status = energyStatusForZone(item);
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, { normal: 0, warning: 0, critical: 0 });
+      target.innerHTML =
+        '<div class="district-summary">' +
+          '<div class="district-summary__head"><span class="map-detail__eyebrow">Resumen operativo</span><h3>Lima Centro</h3><small>Vista consolidada de los 15 distritos</small></div>' +
+          '<div class="district-summary__grid">' +
+            summaryMetric("Distritos", zones.length, "") +
+            summaryMetric("Lecturas frescas", fresh, "") +
+            summaryMetric("Alertas activas", alerts.length, "") +
+            summaryMetric("Infraestructuras", facilities.length, "") +
+          '</div>' +
+          '<div class="district-summary__traffic"><span class="is-normal">' + statusCounts.normal + ' normal</span><span class="is-warning">' + statusCounts.warning + ' atención</span><span class="is-critical">' + statusCounts.critical + ' crítico</span></div>' +
+          '<p class="district-summary__audit">' + escapeHtml(
+            fresh + " frescos" +
+            (maintenance ? " · " + maintenance + " mantenimiento" : "") +
+            (delayed ? " · " + delayed + " retrasados" : "") +
+            (unavailable ? " · " + unavailable + " sin datos/conexión" : "")
+          ) + '</p>' +
+          '<p class="district-summary__hint">Seleccione un distrito para ver demanda, carga, TinyML, alertas e infraestructura asociada.</p>' +
+        '</div>';
+      return;
+    }
+
+    if (!zone) {
+      target.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Distrito no disponible</strong><small>Seleccione nuevamente un distrito.</small></div>';
+      return;
+    }
+
+    const demand = Number.isFinite(zone.demandKw) ? zone.demandKw : sumKnown(meters, "demandKw");
+    const reference = Number.isFinite(zone.referenceDemandKw) ? zone.referenceDemandKw : (Number.isFinite(zone.capacityKw) ? zone.capacityKw : null);
+    const load = Number.isFinite(zone.loadPercent) ? zone.loadPercent : (Number.isFinite(demand) && Number.isFinite(reference) && reference > 0 ? demand / reference * 100 : null);
+    const energy = Number.isFinite(zone.energyTodayKwh) ? zone.energyTodayKwh : sumKnown(meters, "energyTodayKwh");
+    const status = energyStatusForZone(Object.assign({}, zone, { currentDemandKw: demand, referenceDemandKw: reference, loadPercent: load }));
+    const tinyPrediction = state.tinyml && typeof state.tinyml === "object"
+      ? normalizeEnergyStatus(readValue(readValue(state.tinyml, ["currentPrediction"], {}, false) || {}, ["predictedClass"], "")) : "";
+    const tinyLabel = tinyPrediction ? energyStatusLabel(tinyPrediction) : "—";
+
+    const byCategory = {
+      clinic: facilities.filter(function (item) { return item.category === "clinic"; }).length,
+      minsa: facilities.filter(function (item) { return item.category === "minsa"; }).length,
+      essalud: facilities.filter(function (item) { return item.category === "essalud"; }).length,
+      mall: facilities.filter(function (item) { return item.category === "mall"; }).length
+    };
+
+    const points = buildChartPoints();
+    const recent = points.slice(-5);
+    let trendText = "Sin tendencia suficiente";
+    if (recent.length >= 2) {
+      const first = recent[0].value;
+      const last = recent[recent.length - 1].value;
+      const delta = first ? ((last - first) / first) * 100 : 0;
+      trendText = (delta > 0 ? "↑ " : delta < 0 ? "↓ " : "→ ") + numberFormat.format(Math.abs(delta)) + "% · " +
+        recent.map(function (point) { return numberFormat.format(point.value); }).join(" → ") + " kW";
+    }
+
+    target.innerHTML =
+      '<div class="district-summary">' +
+        '<div class="district-summary__head"><span class="map-detail__eyebrow">Resumen del distrito</span><h3>' + escapeHtml(zone.name) + '</h3>' +
+          '<span class="district-summary__status district-summary__status--' + status + '">' + escapeHtml(energyStatusLabel(status)) + '</span></div>' +
+        '<div class="district-summary__grid">' +
+          summaryMetric("Demanda actual", demand, "kW") +
+          summaryMetric("Referencia", reference, "kW") +
+          summaryMetric("Nivel de carga", load, "%") +
+          summaryMetric("Energía hoy", energy, "kWh") +
+          summaryMetric("Telemetría", fresh + "/" + meters.length, "frescos") +
+          summaryMetric("Alertas", alerts.length, "activas") +
+          summaryMetric("TinyML", tinyLabel, "") +
+          summaryMetric("Infraestructura", facilities.length, "") +
+        '</div>' +
+        '<div class="district-summary__load"><div><span>Carga del distrito</span><strong>' + escapeHtml(load === null ? "—" : numberFormat.format(load) + "%") + '</strong></div>' +
+          '<div class="district-summary__track"><span class="district-summary__fill district-summary__fill--' + status + '" style="width:' + Math.max(0, Math.min(100, Number(load) || 0)).toFixed(1) + '%"></span></div></div>' +
+        '<div class="district-summary__section"><small>Infraestructura</small><p>Clínicas ' + byCategory.clinic + ' · MINSA ' + byCategory.minsa + ' · EsSalud ' + byCategory.essalud + ' · C. comerciales ' + byCategory.mall + '</p></div>' +
+        '<div class="district-summary__section"><small>Tendencia reciente</small><p>' + escapeHtml(trendText) + '</p></div>' +
+        '<p class="district-summary__audit">' + escapeHtml(
+          fresh + " frescos" +
+          (maintenance ? " · " + maintenance + " mantenimiento" : "") +
+          (delayed ? " · " + delayed + " retrasados" : "") +
+          (unavailable ? " · " + unavailable + " sin datos/conexión" : "")
+        ) + '</p>' +
+      '</div>';
+  }
+
+  function summaryMetric(label, value, unit) {
+    let display = "—";
+    if (typeof value === "number" && Number.isFinite(value)) display = numberFormat.format(value);
+    else if (value !== null && value !== undefined && value !== "") display = String(value);
+    return '<span class="district-summary__metric"><small>' + escapeHtml(label) + '</small><strong>' + escapeHtml(display) +
+      (unit ? '<em>' + escapeHtml(unit) + '</em>' : '') + '</strong></span>';
+  }
+
   function renderMapDetail(meter) {
+    const target = el.mapDetailContent || el.mapDetail;
     if (!meter) {
-      if (state.selectedZone === "all") {
-        const meters = state.mapData && Array.isArray(state.mapData.meters) ? state.mapData.meters : [];
-        const telemetry = meters.map(telemetryState);
-        const fresh = telemetry.filter(function (status) { return status === "fresh"; }).length;
-        const maintenance = telemetry.filter(function (status) { return status === "maintenance"; }).length;
-        const delayed = telemetry.filter(function (status) { return status === "stale"; }).length;
-        const unavailable = telemetry.filter(function (status) { return status === "nodata" || status === "offline"; }).length;
-        const zones = state.mapData && Array.isArray(state.mapData.zones) ? state.mapData.zones : [];
-        el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Vista general de Lima Centro</strong><small>' +
-          escapeHtml(zones.length + " distritos · " + fresh + " lecturas frescas" +
-          (maintenance ? " · " + maintenance + " en mantenimiento" : "") +
-          (delayed ? " · " + delayed + " retrasadas" : "") +
-          (unavailable ? " · " + unavailable + " sin datos/conexión" : "")) +
-          '</small><small>Seleccione un marcador del mapa para consultar el detalle de un nodo.</small></div>';
-      } else {
-        el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Seleccione un medidor</strong><small>Consulte demanda, calidad eléctrica y versión del equipo.</small></div>';
-      }
+      target.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Seleccione un medidor</strong><small>Consulte demanda, calidad eléctrica y versión del equipo.</small></div>';
       return;
     }
     const telemetry = telemetryState(meter);
@@ -629,15 +762,16 @@
     const energyLoad = zone && Number.isFinite(zone.loadPercent) ? numberFormat.format(zone.loadPercent) + "%" : "—";
     const demand = meter.currentPowerKw === null ? "—" : numberFormat.format(meter.currentPowerKw);
     const powerFactor = meter.powerFactor === null ? "—" : new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(meter.powerFactor);
-    el.mapDetail.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">Medidor ' + escapeHtml(meter.id) + '</span><h3>' + escapeHtml(meter.name) + '</h3><span class="map-detail__zone" style="--zone-color:' + mapZoneColorForMeter(meter) + '">' + escapeHtml(meter.zoneName || zoneNameById(meter.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + energyStatus + '">' + escapeHtml(energyStatusLabel(energyStatus)) + ' · ' + escapeHtml(energyLoad) + '</span></div><span class="map-detail__status map-detail__status--' + statusClass + '">' + escapeHtml(status) + '</span></div>' +
+    target.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">Medidor ' + escapeHtml(meter.id) + '</span><h3>' + escapeHtml(meter.name) + '</h3><span class="map-detail__zone" style="--zone-color:' + mapZoneColorForMeter(meter) + '">' + escapeHtml(meter.zoneName || zoneNameById(meter.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + energyStatus + '">' + escapeHtml(energyStatusLabel(energyStatus)) + ' · ' + escapeHtml(energyLoad) + '</span></div><span class="map-detail__status map-detail__status--' + statusClass + '">' + escapeHtml(status) + '</span></div>' +
       '<div class="map-detail__reading"><small>Demanda instantánea</small><strong>' + escapeHtml(demand) + '<span>kW</span></strong></div>' +
       '<dl><div><dt>Voltaje</dt><dd>' + escapeHtml(formatCompact(meter.voltageV, "V")) + '</dd></div><div><dt>Factor de potencia</dt><dd>' + escapeHtml(powerFactor) + '</dd></div><div><dt>Hardware</dt><dd>' + escapeHtml(meter.hardwareModel || "No informado") + '</dd></div><div><dt>Firmware</dt><dd>' + escapeHtml(meter.firmwareVersion || "No informado") + '</dd></div></dl>' +
       '<p class="map-detail__updated">Última lectura: ' + escapeHtml(formatDateTime(meter.lastSeen)) + ' · ' + escapeHtml(telemetryAgeLabel(meter.lastSeen)) + "</p>";
   }
 
   function renderFacilityDetail(facility) {
+    const target = el.mapDetailContent || el.mapDetail;
     const status = normalizeEnergyStatus(facility.energyStatus) || "normal";
-    el.mapDetail.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">' + escapeHtml(facilityCategoryLabel(facility.category)) + '</span><h3>' + escapeHtml(facility.name) + '</h3><span class="map-detail__zone">' + escapeHtml(facility.zoneName || zoneNameById(facility.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + status + '">' + escapeHtml(energyStatusLabel(status)) + ' · ' + escapeHtml(numberFormat.format(facility.loadPercent)) + '%</span></div><span class="map-detail__status map-detail__status--online">Conectado</span></div>' +
+    target.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">' + escapeHtml(facilityCategoryLabel(facility.category)) + '</span><h3>' + escapeHtml(facility.name) + '</h3><span class="map-detail__zone">' + escapeHtml(facility.zoneName || zoneNameById(facility.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + status + '">' + escapeHtml(energyStatusLabel(status)) + ' · ' + escapeHtml(numberFormat.format(facility.loadPercent)) + '%</span></div><span class="map-detail__status map-detail__status--online">Conectado</span></div>' +
       '<div class="map-detail__reading"><small>Demanda estimada</small><strong>' + escapeHtml(numberFormat.format(facility.currentDemandKw)) + '<span>kW</span></strong></div>' +
       '<dl><div><dt>Red / operador</dt><dd>' + escapeHtml(facility.network || "—") + '</dd></div><div><dt>Potencia de referencia</dt><dd>' + escapeHtml(formatCompact(facility.ratedPowerKw, "kW")) + '</dd></div><div><dt>Dirección</dt><dd>' + escapeHtml(facility.address || "—") + '</dd></div><div><dt>Coordenadas</dt><dd>' + escapeHtml(Number(facility.latitude).toFixed(6) + ", " + Number(facility.longitude).toFixed(6)) + '</dd></div><div><dt>Telemetría</dt><dd>' + (facility.isSimulated ? "Simulada" : "Real") + '</dd></div></dl>' +
       '<p class="map-detail__updated">' + escapeHtml(facility.locationNote || "") + '</p>';
