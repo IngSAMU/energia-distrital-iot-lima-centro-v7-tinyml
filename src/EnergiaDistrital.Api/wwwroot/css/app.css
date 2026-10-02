@@ -480,6 +480,11 @@ canvas:focus-visible,
 .meter-name { display: grid; gap: 0.16rem; }
 .meter-name strong { color: var(--ink); font-size: 0.73rem; }
 .meter-name small { color: var(--ink-faint); font-size: 0.59rem; }
+.reading-time { display: block; color: var(--ink-soft); }
+.reading-age { display: block; margin-top: 0.18rem; font-size: 0.56rem; font-weight: 720; }
+.reading-age--online { color: #08775f; }
+.reading-age--warning { color: #a45f00; }
+.reading-age--offline { color: #a72d35; }
 .status-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.48rem; border-radius: 999px; font-size: 0.61rem; font-weight: 760; }
 .status-pill::before { content: ""; width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
 .status-pill--online { color: #08775f; background: var(--teal-soft); }
