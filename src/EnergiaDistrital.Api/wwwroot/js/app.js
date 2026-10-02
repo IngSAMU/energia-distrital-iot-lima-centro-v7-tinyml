@@ -16,6 +16,7 @@
 
   const POLL_INTERVAL_MS = 5000;
   const REQUEST_TIMEOUT_MS = 8000;
+  const TELEMETRY_FRESH_MS = 15000;
   const numberFormat = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 1 });
   const integerFormat = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 0 });
   const timeFormat = new Intl.DateTimeFormat("es-PE", { hour: "2-digit", minute: "2-digit" });
@@ -36,6 +37,7 @@
     selectedMapFacilityId: "",
     initialized: false,
     loading: false,
+    apiStatus: "initializing",
     lastUpdated: null,
     chartPoints: [],
     chartPositions: [],
@@ -158,9 +160,11 @@
 
     if (successCount > 0) {
       state.lastUpdated = new Date();
-      setConnection(successCount === names.length ? "online" : "partial", successCount === names.length ? "En línea" : "Datos parciales");
+      state.apiStatus = successCount === names.length ? "online" : "partial";
+      setConnection(state.apiStatus, successCount === names.length ? "En línea" : "Datos parciales");
     } else {
-      setConnection("offline", "Sin conexión");
+      state.apiStatus = "offline";
+      setConnection("offline", "API sin conexión");
     }
 
     updateErrorBanner(failed, successCount);
@@ -444,7 +448,7 @@
       const selected = meter.id === state.selectedMapMeterId;
       const label = mapMeterAriaLabel(meter);
       const icon = window.L.divIcon({
-        className: "map-meter-icon-shell status-" + meter.status + (selected ? " is-selected" : ""),
+        className: "map-meter-icon-shell status-" + telemetryStatusClass(telemetryState(meter)) + (selected ? " is-selected" : ""),
         html: '<span class="map-marker" style="--zone-color:' + mapZoneColorForMeter(meter) + '" aria-hidden="true"></span>',
         iconSize: [28, 28],
         iconAnchor: [14, 14]
@@ -555,7 +559,7 @@
     const meterMarkup = meters.map(function (meter) {
       const position = fallbackPosition(meter, bounds);
       const selected = meter.id === state.selectedMapMeterId;
-      return '<button type="button" class="map-fallback-marker status-' + meter.status + (selected ? " is-selected" : "") + '" data-map-meter-id="' + escapeHtml(meter.id) + '" style="left:' + position.x + "%;top:" + position.y + "%;--zone-color:" + mapZoneColorForMeter(meter) + '" aria-label="' + escapeHtml(mapMeterAriaLabel(meter)) + '" aria-pressed="' + (selected ? "true" : "false") + '"></button>';
+      return '<button type="button" class="map-fallback-marker status-' + telemetryStatusClass(telemetryState(meter)) + (selected ? " is-selected" : "") + '" data-map-meter-id="' + escapeHtml(meter.id) + '" style="left:' + position.x + "%;top:" + position.y + "%;--zone-color:" + mapZoneColorForMeter(meter) + '" aria-label="' + escapeHtml(mapMeterAriaLabel(meter)) + '" aria-pressed="' + (selected ? "true" : "false") + '"></button>';
     }).join("");
     const facilityMarkup = (facilities || []).map(function (facility) {
       const position = fallbackPosition(facility, bounds);
@@ -598,17 +602,19 @@
       el.mapDetail.innerHTML = '<div class="map-detail__empty"><span aria-hidden="true">IoT</span><strong>Seleccione un medidor</strong><small>Consulte demanda, calidad eléctrica y versión del equipo.</small></div>';
       return;
     }
-    const status = mapStatusLabel(meter.status);
+    const telemetry = telemetryState(meter);
+    const status = telemetryLabel(telemetry);
+    const statusClass = telemetryStatusClass(telemetry);
     const mapZones = state.mapData && Array.isArray(state.mapData.zones) ? state.mapData.zones : [];
     const zone = mapZones.find(function (entry) { return sameZone(meter, entry.id, entry.name); }) || null;
     const energyStatus = energyStatusForZone(zone || {});
     const energyLoad = zone && Number.isFinite(zone.loadPercent) ? numberFormat.format(zone.loadPercent) + "%" : "—";
     const demand = meter.currentPowerKw === null ? "—" : numberFormat.format(meter.currentPowerKw);
     const powerFactor = meter.powerFactor === null ? "—" : new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(meter.powerFactor);
-    el.mapDetail.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">Medidor ' + escapeHtml(meter.id) + '</span><h3>' + escapeHtml(meter.name) + '</h3><span class="map-detail__zone" style="--zone-color:' + mapZoneColorForMeter(meter) + '">' + escapeHtml(meter.zoneName || zoneNameById(meter.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + energyStatus + '">' + escapeHtml(energyStatusLabel(energyStatus)) + ' · ' + escapeHtml(energyLoad) + '</span></div><span class="map-detail__status map-detail__status--' + meter.status + '">' + status + '</span></div>' +
+    el.mapDetail.innerHTML = '<div class="map-detail__topline"><div><span class="map-detail__eyebrow">Medidor ' + escapeHtml(meter.id) + '</span><h3>' + escapeHtml(meter.name) + '</h3><span class="map-detail__zone" style="--zone-color:' + mapZoneColorForMeter(meter) + '">' + escapeHtml(meter.zoneName || zoneNameById(meter.zoneId) || "Sin distrito") + '</span><span class="map-detail__energy map-detail__energy--' + energyStatus + '">' + escapeHtml(energyStatusLabel(energyStatus)) + ' · ' + escapeHtml(energyLoad) + '</span></div><span class="map-detail__status map-detail__status--' + statusClass + '">' + escapeHtml(status) + '</span></div>' +
       '<div class="map-detail__reading"><small>Demanda instantánea</small><strong>' + escapeHtml(demand) + '<span>kW</span></strong></div>' +
       '<dl><div><dt>Voltaje</dt><dd>' + escapeHtml(formatCompact(meter.voltageV, "V")) + '</dd></div><div><dt>Factor de potencia</dt><dd>' + escapeHtml(powerFactor) + '</dd></div><div><dt>Hardware</dt><dd>' + escapeHtml(meter.hardwareModel || "No informado") + '</dd></div><div><dt>Firmware</dt><dd>' + escapeHtml(meter.firmwareVersion || "No informado") + '</dd></div></dl>' +
-      '<p class="map-detail__updated">Última lectura: ' + escapeHtml(formatDateTime(meter.lastSeen)) + "</p>";
+      '<p class="map-detail__updated">Última lectura: ' + escapeHtml(formatDateTime(meter.lastSeen)) + ' · ' + escapeHtml(telemetryAgeLabel(meter.lastSeen)) + "</p>";
   }
 
   function renderFacilityDetail(facility) {
@@ -731,8 +737,42 @@
     return status === "online" ? "En línea" : status === "warning" ? "Atención" : "Sin conexión";
   }
 
+  function telemetryState(meter) {
+    if (!meter) return "nodata";
+    const rawStatus = normalizeKey(meter.rawStatus || "");
+    if (["maintenance", "mantenimiento"].includes(rawStatus)) return "maintenance";
+    if (meter.status === "offline") return "offline";
+    if (!meter.lastSeen || !(meter.lastSeen instanceof Date) || Number.isNaN(meter.lastSeen.getTime())) return "nodata";
+    const ageMs = Math.max(0, Date.now() - meter.lastSeen.getTime());
+    return ageMs <= TELEMETRY_FRESH_MS ? "fresh" : "stale";
+  }
+
+  function telemetryLabel(status) {
+    if (status === "fresh") return "En línea";
+    if (status === "stale") return "Lectura retrasada";
+    if (status === "maintenance") return "Mantenimiento";
+    if (status === "nodata") return "Sin datos";
+    return "Sin conexión";
+  }
+
+  function telemetryStatusClass(status) {
+    if (status === "fresh") return "online";
+    if (status === "stale" || status === "maintenance") return "warning";
+    return "offline";
+  }
+
+  function telemetryAgeLabel(date) {
+    if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return "Sin lectura válida";
+    const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (seconds < 60) return "Hace " + seconds + " s";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return "Hace " + minutes + (minutes === 1 ? " min" : " min");
+    const hours = Math.floor(minutes / 60);
+    return "Hace " + hours + (hours === 1 ? " h" : " h");
+  }
+
   function mapMeterAriaLabel(meter) {
-    return meter.name + ", " + (meter.zoneName || zoneNameById(meter.zoneId) || "sin distrito") + ", " + mapStatusLabel(meter.status) + ", demanda " + formatCompact(meter.currentPowerKw, "kW");
+    return meter.name + ", " + (meter.zoneName || zoneNameById(meter.zoneId) || "sin distrito") + ", " + telemetryLabel(telemetryState(meter)) + ", demanda " + formatCompact(meter.currentPowerKw, "kW");
   }
 
   function renderZoneSelector() {
@@ -767,11 +807,15 @@
       energy = selectedZone && selectedZone.energyTodayKwh !== null ? selectedZone.energyTodayKwh : sumKnown(meters, "energyTodayKwh");
     }
 
-    const online = meters.filter(function (meter) { return meter.status === "online"; }).length;
+    const telemetryStates = meters.map(telemetryState);
+    const freshCount = telemetryStates.filter(function (status) { return status === "fresh"; }).length;
+    const staleCount = telemetryStates.filter(function (status) { return status === "stale"; }).length;
+    const noDataCount = telemetryStates.filter(function (status) { return status === "nodata"; }).length;
+    const maintenanceCount = telemetryStates.filter(function (status) { return status === "maintenance"; }).length;
+    const offlineCount = telemetryStates.filter(function (status) { return status === "offline"; }).length;
     const totalMetersFromDashboard = readNumber(dashboard, ["totalMeters", "meterCount", "metersTotal"]);
-    const onlineFromDashboard = readNumber(dashboard, ["onlineMeters", "activeMeters", "connectedMeters"]);
     const total = allZones && totalMetersFromDashboard !== null ? totalMetersFromDashboard : meters.length;
-    const active = allZones && onlineFromDashboard !== null ? onlineFromDashboard : online;
+    const active = freshCount;
 
     const unresolved = alerts.filter(function (alert) { return alert.active; });
     const alertCountFromDashboard = readNumber(dashboard, ["activeAlerts", "alertCount", "unresolvedAlerts", "openAlerts"]);
@@ -794,7 +838,19 @@
       el.demandTrend.className = "metric-card__meta";
     }
     el.energyMeta.textContent = allZones ? "Acumulado de Lima Centro" : "Acumulado del distrito seleccionado";
-    el.metersMeta.textContent = total ? integerFormat.format(Math.max(0, total - active)) + " sin conexión" : "No hay medidores registrados";
+    if (!total) {
+      el.metersMeta.textContent = "No hay medidores registrados";
+    } else if (state.apiStatus === "offline") {
+      el.metersMeta.textContent = "API sin conexión · datos congelados";
+    } else {
+      const audit = [];
+      audit.push(integerFormat.format(freshCount) + " frescos");
+      if (maintenanceCount) audit.push(integerFormat.format(maintenanceCount) + " mantenimiento");
+      if (staleCount) audit.push(integerFormat.format(staleCount) + " retrasados");
+      if (noDataCount) audit.push(integerFormat.format(noDataCount) + " sin datos");
+      if (offlineCount) audit.push(integerFormat.format(offlineCount) + " sin conexión");
+      el.metersMeta.textContent = audit.join(" · ");
+    }
     el.alertsMeta.textContent = criticalCount ? integerFormat.format(criticalCount) + (criticalCount === 1 ? " crítica" : " críticas") : "Sin alertas críticas";
   }
 
@@ -879,14 +935,16 @@
     }
 
     el.metersBody.innerHTML = meters.map(function (meter) {
-      const statusLabel = meter.status === "online" ? "En línea" : meter.status === "warning" ? "Atención" : "Sin conexión";
+      const telemetry = telemetryState(meter);
+      const statusClass = telemetryStatusClass(telemetry);
+      const ageLabel = telemetryAgeLabel(meter.lastSeen);
       return "<tr>" +
         '<td data-label="Medidor"><span class="meter-name"><strong>' + escapeHtml(meter.name) + "</strong><small>" + escapeHtml(meter.code) + "</small></span></td>" +
         '<td data-label="Distrito">' + escapeHtml(meter.zoneName || zoneNameById(meter.zoneId) || "Sin asignar") + "</td>" +
         '<td data-label="Voltaje">' + formatCompact(meter.voltageV, "V") + "</td>" +
         '<td data-label="Demanda">' + formatCompact(meter.demandKw, "kW") + "</td>" +
-        '<td data-label="Estado"><span class="status-pill status-pill--' + meter.status + '">' + statusLabel + "</span></td>" +
-        '<td data-label="Último reporte">' + formatDateTime(meter.lastSeen) + "</td>" +
+        '<td data-label="Estado"><span class="status-pill status-pill--' + statusClass + '">' + escapeHtml(telemetryLabel(telemetry)) + "</span></td>" +
+        '<td data-label="Último reporte"><span class="reading-time">' + escapeHtml(formatDateTime(meter.lastSeen)) + '</span><small class="reading-age reading-age--' + statusClass + '">' + escapeHtml(ageLabel) + "</small></td>" +
       "</tr>";
     }).join("");
   }
@@ -1167,6 +1225,7 @@
         zoneName: stringOrEmpty(readValue(raw, ["zoneName", "areaName", "sectorName", "zone"], "")),
         latitude: readNumber(raw, ["latitude", "lat"]),
         longitude: readNumber(raw, ["longitude", "lng", "lon"]),
+        rawStatus: String(readValue(raw, ["status", "connectionStatus", "state", "online"], "offline")),
         status: normalizeMeterStatus(readValue(raw, ["status", "connectionStatus", "state", "online"], "offline")),
         currentPowerKw: readNumber(raw, ["currentPowerKw", "currentDemandKw", "demandKw", "powerKw", "power"]),
         voltageV: readNumber(raw, ["voltageV", "voltage", "currentVoltageV"]),
@@ -1245,6 +1304,7 @@
         demandKw: readNumber(raw, ["currentDemandKw", "demandKw", "powerKw", "currentPowerKw", "currentLoadKw", "power"]),
         energyTodayKwh: readNumber(raw, ["energyTodayKwh", "consumptionTodayKwh", "dailyConsumptionKwh", "todayKwh", "energyKwh"]),
         voltageV: readNumber(raw, ["voltageV", "voltage", "currentVoltageV"]),
+        rawStatus: statusValue,
         status: normalizeMeterStatus(statusValue),
         lastSeen: parseDate(readValue(raw, ["lastReadingUtc", "lastSeen", "lastReadingAt", "lastUpdate", "updatedAt", "timestampUtc", "timestamp"], null))
       };
@@ -1474,7 +1534,11 @@
     el.connectionState.dataset.state = status;
     el.connectionLabel.textContent = label;
     if (status === "updating") {
-      el.lastUpdated.textContent = state.lastUpdated ? "Última: " + timeFormat.format(state.lastUpdated) : "Esperando datos";
+      el.lastUpdated.textContent = state.lastUpdated ? "Última válida: " + timeFormat.format(state.lastUpdated) : "Esperando datos";
+    } else if (status === "offline") {
+      el.lastUpdated.textContent = state.lastUpdated ? "Última válida: " + timeFormat.format(state.lastUpdated) + " · datos congelados" : "API no disponible";
+    } else if (status === "partial") {
+      el.lastUpdated.textContent = state.lastUpdated ? "Actualización parcial " + timeFormat.format(state.lastUpdated) : "Datos parciales";
     } else if (state.lastUpdated) {
       el.lastUpdated.textContent = "Actualizado " + timeFormat.format(state.lastUpdated);
     } else {
@@ -1487,8 +1551,8 @@
     el.dataBanner.hidden = false;
     el.dataBannerTitle.textContent = successCount ? "Actualización parcial." : "API local sin respuesta.";
     el.dataBannerMessage.textContent = successCount
-      ? "Sin respuesta de: " + failed.join(", ") + ". Conservamos la última información disponible."
-      : "El dashboard sigue abierto, pero EnergiaDistrital.Api no está respondiendo en " + window.location.origin + ". Inicia la API y pulsa Reintentar.";
+      ? "Sin respuesta de: " + failed.join(", ") + ". Se conserva la última información disponible; las lecturas con más de 15 s se marcan como retrasadas."
+      : "EnergiaDistrital.Api no responde en " + window.location.origin + ". Los valores visibles son la última lectura conocida y quedan marcados como datos congelados hasta recuperar la conexión.";
   }
 
   function endpointLabel(name) {
